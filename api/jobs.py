@@ -20,6 +20,8 @@ class Job:
     total: int = 0
     current: str = ""
     epub_files: list[Path] = field(default_factory=list)
+    # actual chapter ranges per epub: [{"path": Path, "first": int, "last": int}]
+    epub_ranges: list[dict] = field(default_factory=list)
     error: Optional[str] = None
     site_url: Optional[str] = None
 

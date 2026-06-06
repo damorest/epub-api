@@ -230,12 +230,23 @@ def parse_book(
                 if (vol - 1) * CHAPTERS_PER_VOLUME < c.number <= vol * CHAPTERS_PER_VOLUME
             ]
             if vol_chapters:
-                epub_files.append(build_volume(vol_chapters, vol, out_dir, title=title, slug=slug))
+                path = build_volume(vol_chapters, vol, out_dir, title=title, slug=slug)
+                epub_files.append(path)
+                job.epub_ranges.append({
+                    "path": path,
+                    "first": vol_chapters[0].number,
+                    "last": vol_chapters[-1].number,
+                })
 
         # full book when multiple volumes
         if len(epub_files) > 1:
             full_epub = build_volume(chapters, 0, out_dir, title=title, slug=slug)
             epub_files.insert(0, full_epub)
+            job.epub_ranges.insert(0, {
+                "path": full_epub,
+                "first": chapters[0].number,
+                "last": chapters[-1].number,
+            })
 
         job.epub_files = epub_files
         job.status = "done"

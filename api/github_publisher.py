@@ -171,6 +171,9 @@ def publish_book(job) -> str:
     slug = job.slug
     epub_meta: list[dict] = []
 
+    # build a lookup: path → actual chapter range
+    ranges = {r["path"]: r for r in getattr(job, "epub_ranges", [])}
+
     for ep_path in job.epub_files:
         github_path = f"books/{slug}/{ep_path.name}"
         content = ep_path.read_bytes()
@@ -178,8 +181,14 @@ def publish_book(job) -> str:
 
         _upsert(repo, github_path, content, f"Add {ep_path.name}")
 
+        rng = ranges.get(ep_path)
         if "full" in ep_path.name:
-            label = "Повна книга"
+            if rng:
+                label = f"Повна книга (розд. {rng['first']}–{rng['last']})"
+            else:
+                label = "Повна книга"
+        elif rng:
+            label = f"Том (розд. {rng['first']}–{rng['last']})"
         else:
             try:
                 vol = int(ep_path.stem.split("_")[-1])
