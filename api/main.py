@@ -32,11 +32,6 @@ app.add_middleware(
 # Schemas
 # ---------------------------------------------------------------------------
 
-_UUID_RE = re.compile(
-    r"-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
-    re.IGNORECASE,
-)
-
 # Ukrainian → Latin transliteration table for slug generation
 _UA_TRANSLIT = str.maketrans({
     "а": "a",  "б": "b",  "в": "v",  "г": "h",  "ґ": "g",  "д": "d",
@@ -52,10 +47,6 @@ def _make_slug(title: str) -> str:
     t = title.lower().translate(_UA_TRANSLIT)
     return re.sub(r"[^a-z0-9]+", "-", t).strip("-") or "book"
 
-
-def _clean_url(url: str) -> str:
-    """Strip trailing UUID from URL if present."""
-    return _UUID_RE.sub("", url.rstrip("/"))
 
 
 class ParseRequest(BaseModel):
@@ -87,13 +78,10 @@ def start_parse(req: ParseRequest, background_tasks: BackgroundTasks):
     slug = _make_slug(req.title)
     job = job_store.create(req.title, slug)
 
-    # Strip UUID only in pattern mode — in follow_next mode the UUID is
-    # part of the chapter's actual URL and must be preserved.
-    clean = req.url if req.follow_next else _clean_url(req.url)
     background_tasks.add_task(
         parse_book,
         job_id=job.id,
-        url=clean,
+        url=req.url,
         title=req.title,
         slug=slug,
         start=req.start,
