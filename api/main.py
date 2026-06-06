@@ -125,7 +125,19 @@ def publish(job_id: str):
     if job.status != "done":
         raise HTTPException(status_code=400, detail=f"Job not ready (status: {job.status})")
 
-    url = publish_book(job)
+    missing = [str(p) for p in job.epub_files if not p.exists()]
+    if missing:
+        raise HTTPException(
+            status_code=409,
+            detail=f"EPUB files missing (server may have restarted): {missing}",
+        )
+
+    try:
+        url = publish_book(job)
+    except Exception as exc:
+        logging.exception("publish_book failed for job %s", job_id)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+
     job.status = "published"
     job.site_url = url
     return {"url": url}
