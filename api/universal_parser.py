@@ -161,13 +161,16 @@ def parse_book(
 
     try:
         while True:
+            # respect cancellation and end limit regardless of mode
+            if job_store.get(job_id).status == "cancelled":
+                break
+            if chapter_num > end:
+                break
+
             # --- determine URL for this chapter ---
             if not follow_next:
-                if chapter_num > end:
-                    break
                 if "{n}" in url:
                     current_url = url.replace("{n}", str(chapter_num))
-                # else: fixed URL list not supported in this mode
 
             job.progress = chapter_num - start
             job.current = f"Розділ {chapter_num}…"

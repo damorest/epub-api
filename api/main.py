@@ -104,6 +104,18 @@ def get_status(job_id: str):
     }
 
 
+@app.post("/cancel/{job_id}")
+def cancel(job_id: str):
+    """Cancel a running job."""
+    job = job_store.get(job_id)
+    if not job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    if job.status not in ("pending", "running"):
+        raise HTTPException(status_code=400, detail=f"Cannot cancel job with status: {job.status}")
+    job.status = "cancelled"
+    return {"cancelled": True}
+
+
 @app.post("/publish/{job_id}")
 def publish(job_id: str):
     """Push EPUBs to GitHub and update the library site."""

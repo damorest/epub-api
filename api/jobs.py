@@ -6,7 +6,8 @@ from pathlib import Path
 from typing import Optional
 
 # status flow: pending → running → done → published
-#                                 └→ error
+#                                 ├→ error
+#                                 └→ cancelled
 
 
 @dataclass
