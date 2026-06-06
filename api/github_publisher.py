@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Optional
 
 from dotenv import load_dotenv
-from github import Github, GithubException
+from github import Auth, Github, GithubException
 
 load_dotenv()
 logger = logging.getLogger(__name__)
@@ -165,7 +165,7 @@ def _build_index(books: list[dict]) -> str:
 
 def publish_book(job) -> str:
     """Upload EPUBs, update books.json and index.html. Returns site URL."""
-    g = Github(_GITHUB_TOKEN)
+    g = Github(auth=Auth.Token(_GITHUB_TOKEN))
     repo = g.get_repo(_GITHUB_REPO)
 
     slug = job.slug
@@ -222,3 +222,27 @@ def publish_book(job) -> str:
     _upsert(repo, "index.html", html.encode("utf-8"), f"Library: add «{job.title}»")
 
     return f"{_PAGES_URL}"
+
+
+def delete_book(slug: str) -> None:
+    """Remove a book from books.json, delete its files, regenerate index.html."""
+    g = Github(auth=Auth.Token(_GITHUB_TOKEN))
+    repo = g.get_repo(_GITHUB_REPO)
+
+    # Delete epub files under books/{slug}/
+    try:
+        files = repo.get_contents(f"books/{slug}")
+        if not isinstance(files, list):
+            files = [files]
+        for f in files:
+            repo.delete_file(f.path, f"Delete {f.name}", f.sha)
+            logger.info("GitHub ✕ %s", f.path)
+    except GithubException:
+        logger.warning("No files found under books/%s — skipping file deletion", slug)
+
+    books = _load_books(repo)
+    books = [b for b in books if b["slug"] != slug]
+    _save_books(repo, books)
+
+    html = _build_index(books)
+    _upsert(repo, "index.html", html.encode("utf-8"), f"Library: remove «{slug}»")

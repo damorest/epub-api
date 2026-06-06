@@ -9,7 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from api import jobs as job_store
-from api.github_publisher import publish_book
+from api.github_publisher import delete_book, publish_book
 from api.universal_parser import parse_book
 
 logging.basicConfig(
@@ -143,6 +143,17 @@ def publish(job_id: str):
     job.status = "published"
     job.site_url = url
     return {"url": url}
+
+
+@app.delete("/books/{slug}")
+def remove_book(slug: str):
+    """Delete a book from GitHub Pages library."""
+    try:
+        delete_book(slug)
+    except Exception as exc:
+        logging.exception("delete_book failed for slug %s", slug)
+        raise HTTPException(status_code=500, detail=str(exc)) from exc
+    return {"deleted": slug}
 
 
 @app.get("/books")
