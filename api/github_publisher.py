@@ -189,7 +189,12 @@ def publish_book(job) -> str:
             except ValueError:
                 label = ep_path.stem
 
-        epub_meta.append({"name": ep_path.name, "label": label, "size_kb": size_kb})
+        epub_meta.append({
+            "name": ep_path.name,
+            "label": label,
+            "size_kb": size_kb,
+            "url": f"{_PAGES_URL}/books/{slug}/{ep_path.name}",
+        })
 
     # Put full book first in the list
     epub_meta.sort(key=lambda e: (0 if "full" in e["name"] else 1, e["name"]))
