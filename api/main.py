@@ -37,6 +37,21 @@ _UUID_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Ukrainian → Latin transliteration table for slug generation
+_UA_TRANSLIT = str.maketrans({
+    "а": "a",  "б": "b",  "в": "v",  "г": "h",  "ґ": "g",  "д": "d",
+    "е": "e",  "є": "ie", "ж": "zh", "з": "z",  "и": "y",  "і": "i",
+    "ї": "i",  "й": "i",  "к": "k",  "л": "l",  "м": "m",  "н": "n",
+    "о": "o",  "п": "p",  "р": "r",  "с": "s",  "т": "t",  "у": "u",
+    "ф": "f",  "х": "kh", "ц": "ts", "ч": "ch", "ш": "sh", "щ": "shch",
+    "ь": "",   "ю": "iu", "я": "ia",
+})
+
+
+def _make_slug(title: str) -> str:
+    t = title.lower().translate(_UA_TRANSLIT)
+    return re.sub(r"[^a-z0-9]+", "-", t).strip("-") or "book"
+
 
 def _clean_url(url: str) -> str:
     """Strip trailing UUID from URL if present."""
@@ -69,7 +84,7 @@ def ping():
 @app.post("/parse")
 def start_parse(req: ParseRequest, background_tasks: BackgroundTasks):
     """Start a parse job. Returns job_id for polling."""
-    slug = re.sub(r"[^a-z0-9]+", "-", req.title.lower()).strip("-") or "book"
+    slug = _make_slug(req.title)
     job = job_store.create(req.title, slug)
 
     # Strip UUID only in pattern mode — in follow_next mode the UUID is
