@@ -4,6 +4,7 @@ import logging
 import re
 
 from fastapi import BackgroundTasks, FastAPI, HTTPException
+
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
@@ -31,6 +32,17 @@ app.add_middleware(
 # Schemas
 # ---------------------------------------------------------------------------
 
+_UUID_RE = re.compile(
+    r"-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$",
+    re.IGNORECASE,
+)
+
+
+def _clean_url(url: str) -> str:
+    """Strip trailing UUID from URL if present."""
+    return _UUID_RE.sub("", url.rstrip("/"))
+
+
 class ParseRequest(BaseModel):
     url: str
     title: str
@@ -54,10 +66,11 @@ def start_parse(req: ParseRequest, background_tasks: BackgroundTasks):
     slug = re.sub(r"[^a-z0-9]+", "-", req.title.lower()).strip("-") or "book"
     job = job_store.create(req.title, slug)
 
+    clean = _clean_url(req.url)
     background_tasks.add_task(
         parse_book,
         job_id=job.id,
-        url=req.url,
+        url=clean,
         title=req.title,
         slug=slug,
         start=req.start,
