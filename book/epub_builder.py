@@ -86,6 +86,8 @@ def build_volume(
     volume: int,
     output_dir: Path,
     *,
+    title: str = BOOK_TITLE,
+    slug: str = "zvilnyty_vidmu",
     add_cover: bool = True,
 ) -> Path:
     """Build a single EPUB volume and write it to *output_dir*.
@@ -96,14 +98,21 @@ def build_volume(
         raise ValueError("chapters list is empty")
 
     output_dir.mkdir(parents=True, exist_ok=True)
-    out_path = output_dir / f"zvilnyty_vidmu_vol_{volume}.epub"
+    if volume == 0:
+        out_path = output_dir / f"{slug}_full.epub"
+        epub_title = title
+        description = f"Всі розділи: {chapters[0].number}–{chapters[-1].number}"
+    else:
+        out_path = output_dir / f"{slug}_vol_{volume}.epub"
+        epub_title = f"{title} — Том {volume}"
+        description = f"Том {volume}, розділи {chapters[0].number}–{chapters[-1].number}"
 
     book = epub.EpubBook()
-    book.set_identifier(f"zvilnyty-vidmu-vol-{volume}-{uuid.uuid4().hex[:8]}")
-    book.set_title(f"{BOOK_TITLE} — Том {volume}")
+    book.set_identifier(f"{slug}-vol-{volume}-{uuid.uuid4().hex[:8]}")
+    book.set_title(epub_title)
     book.set_language(BOOK_LANGUAGE)
     book.add_author(BOOK_AUTHOR)
-    book.add_metadata("DC", "description", f"Том {volume}, розділи {chapters[0].number}–{chapters[-1].number}")
+    book.add_metadata("DC", "description", description)
 
     # Cover
     if add_cover:
