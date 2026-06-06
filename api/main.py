@@ -72,7 +72,9 @@ def start_parse(req: ParseRequest, background_tasks: BackgroundTasks):
     slug = re.sub(r"[^a-z0-9]+", "-", req.title.lower()).strip("-") or "book"
     job = job_store.create(req.title, slug)
 
-    clean = _clean_url(req.url)
+    # Strip UUID only in pattern mode — in follow_next mode the UUID is
+    # part of the chapter's actual URL and must be preserved.
+    clean = req.url if req.follow_next else _clean_url(req.url)
     background_tasks.add_task(
         parse_book,
         job_id=job.id,
