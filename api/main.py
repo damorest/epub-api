@@ -60,6 +60,12 @@ def root():
     return {"status": "ok", "service": "epub-generator"}
 
 
+@app.get("/ping")
+def ping():
+    """Keep-alive endpoint — Flutter pings this every 20 s to prevent Render sleep."""
+    return {"pong": True}
+
+
 @app.post("/parse")
 def start_parse(req: ParseRequest, background_tasks: BackgroundTasks):
     """Start a parse job. Returns job_id for polling."""
