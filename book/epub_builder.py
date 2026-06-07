@@ -12,7 +12,6 @@ from book import cover as cover_gen
 
 logger = logging.getLogger(__name__)
 
-BOOK_TITLE = "Звільнити цю відьму"
 BOOK_LANGUAGE = "uk"
 BOOK_AUTHOR = "Автор невідомий"
 
@@ -86,8 +85,8 @@ def build_volume(
     volume: int,
     output_dir: Path,
     *,
-    title: str = BOOK_TITLE,
-    slug: str = "zvilnyty_vidmu",
+    title: str = "Книга",
+    slug: str = "book",
     add_cover: bool = True,
 ) -> Path:
     """Build a single EPUB volume and write it to *output_dir*.
@@ -117,7 +116,7 @@ def build_volume(
     # Cover
     if add_cover:
         try:
-            cover_bytes = cover_gen.generate(volume)
+            cover_bytes = cover_gen.generate(volume, title=title)
             book.set_cover("images/cover.jpg", cover_bytes)
         except Exception as exc:  # noqa: BLE001
             logger.warning("Обкладинку пропущено: %s", exc)

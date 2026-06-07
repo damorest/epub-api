@@ -57,8 +57,27 @@ def _center_text(draw, text: str, font, y: int, color: tuple, width: int) -> Non
     draw.text((x, y), text, fill=color, font=font)
 
 
-def generate(volume: int) -> bytes:
-    """Return JPEG bytes for the cover of *volume*."""
+def _wrap_text(text: str, font, max_width: int, draw) -> list[str]:
+    """Split *text* into lines that fit within *max_width* pixels."""
+    words = text.split()
+    lines: list[str] = []
+    current = ""
+    for word in words:
+        candidate = f"{current} {word}".strip() if current else word
+        bbox = draw.textbbox((0, 0), candidate, font=font)
+        if bbox[2] - bbox[0] <= max_width:
+            current = candidate
+        else:
+            if current:
+                lines.append(current)
+            current = word
+    if current:
+        lines.append(current)
+    return lines or [text]
+
+
+def generate(volume: int, title: str = "") -> bytes:
+    """Return JPEG bytes for the cover of *volume* with the given *title*."""
     try:
         from PIL import Image, ImageDraw
 
@@ -66,21 +85,33 @@ def generate(volume: int) -> bytes:
         draw = ImageDraw.Draw(img)
 
         # Border
-        for inset, width in ((15, 3), (25, 1)):
+        for inset, border_width in ((15, 3), (25, 1)):
             draw.rectangle(
                 [inset, inset, WIDTH - inset, HEIGHT - inset],
                 outline=_ACCENT_COLOR,
-                width=width,
+                width=border_width,
             )
 
         font_title = _find_font(52)
-        font_sub = _find_font(38)
-        font_vol = _find_font(34)
+        font_vol = _find_font(36)
 
-        _center_text(draw, "Звільнити", font_title, 220, _ACCENT_COLOR, WIDTH)
-        _center_text(draw, "цю відьму", font_title, 290, _ACCENT_COLOR, WIDTH)
-        _center_text(draw, "Release That Witch", font_sub, 390, _TEXT_COLOR, WIDTH)
-        _center_text(draw, f"Том {volume}", font_vol, 700, _SUB_COLOR, WIDTH)
+        # Title — wrap long titles, center vertically in the upper half
+        display_title = title or "Книга"
+        lines = _wrap_text(display_title, font_title, WIDTH - 80, draw)
+        line_h = font_title.getbbox("Ай")[3] + 14
+        block_h = line_h * len(lines)
+        y = (HEIGHT // 2 - block_h) // 2  # vertically center in top half
+        for line in lines:
+            _center_text(draw, line, font_title, y, _ACCENT_COLOR, WIDTH)
+            y += line_h
+
+        # Volume badge (bottom area)
+        vol_text = f"Том {volume}" if volume > 0 else "Повне видання"
+        _center_text(draw, vol_text, font_vol, HEIGHT - 160, _SUB_COLOR, WIDTH)
+
+        # Thin divider above volume text
+        draw.line([(80, HEIGHT - 185), (WIDTH - 80, HEIGHT - 185)],
+                  fill=_ACCENT_COLOR, width=1)
 
         buf = io.BytesIO()
         img.save(buf, format="JPEG", quality=90)
@@ -88,7 +119,6 @@ def generate(volume: int) -> bytes:
 
     except Exception as exc:  # noqa: BLE001
         logger.warning("Cover generation failed (%s); using blank cover.", exc)
-        # Return a 1×1 white pixel JPEG as fallback
         from PIL import Image
         img = Image.new("RGB", (1, 1), (255, 255, 255))
         buf = io.BytesIO()
